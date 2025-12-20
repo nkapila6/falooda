@@ -1,0 +1,9 @@
+[project]
+name = "falooda"
+version = "0.0.1"
+description = "a layered agentic pipeline for stacking genres, textures, and soft magic into colorful narratives."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "agno>=2.3.18",
+]
