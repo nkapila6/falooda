@@ -6,4 +6,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "agno>=2.3.18",
+    "mcp>=1.25.0",
+    "ollama>=0.6.1",
 ]
