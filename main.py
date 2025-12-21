@@ -17,7 +17,8 @@ from agent_prompts import story_ideator_prompt
 from agent_prompts import story_writer_prompt
 from agent_prompts import web_search_prompt
 
-model_name = "PetrosStav/gemma3-tools:4b"
+model_name_web_search = "PetrosStav/gemma3-tools:4b"
+model_name_story = "adi0adi/ollama_stheno-8b_v3.1_q6k"
 mcp_local_rag = MCPTools(
     command="uvx --python=3.10 --from git+https://github.com/nkapila6/mcp-local-rag mcp-local-rag",
     timeout_seconds=60
@@ -49,21 +50,21 @@ def make_agents(age_group:str, genre:str):
     web_searcher = Agent(
         name="Web Searcher",
         instructions=instructions_web,
-        model=Ollama(id=model_name),
+        model=Ollama(id=model_name_web_search),
         debug_mode=debug,
         markdown=False,
     )
     story_ideator = Agent(
         name="Story Ideator",
         instructions=instructions_idea,
-        model=Ollama(id=model_name),
+        model=Ollama(id=model_name_story),
         debug_mode=debug,
         markdown=False,
     )
     story_writer = Agent(
         name="Story Writer",
         instructions=instructions_write,
-        model=Ollama(id=model_name),
+        model=Ollama(id=model_name_story),
         debug_mode=debug,
         markdown=False,
     )
