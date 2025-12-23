@@ -6,7 +6,7 @@ Created on 2025-12-20 10:55:29 Saturday
 @author: Nikhil Kapila
 """
 
-import asyncio, json, re
+import asyncio, json, re, random
 from pathlib import Path
 from agno.agent import Agent
 from agno.models.ollama import Ollama
@@ -63,10 +63,46 @@ AGE_GROUPS_GENRES = {
 }
 STORIES_PER_COMBINATION = 5
 
+# variation seeds to create diverse stories (genre-agnostic)
+VARIATION_SEEDS = [
+    "discovering something new in an unexpected place",
+    "overcoming a small fear with help from others",
+    "learning an important lesson through a mistake",
+    "making a new friend in an unlikely situation",
+    "solving a problem using creativity and teamwork",
+    "experiencing a magical moment in everyday life",
+    "helping someone in need and feeling proud",
+    "exploring an unfamiliar environment",
+    "trying something difficult for the first time",
+    "finding beauty in something ordinary",
+    "sharing something special with others",
+    "being patient and waiting for the right moment",
+    "using imagination to create something wonderful",
+    "standing up for what is right",
+    "learning to appreciate differences",
+    "discovering hidden talents or abilities",
+    "working together to achieve a goal",
+    "finding comfort in familiar routines",
+    "embracing change and new experiences",
+    "showing kindness to someone unexpected",
+    "persevering through a difficult challenge",
+    "celebrating small victories and achievements",
+    "learning from wise mentors or guides",
+    "discovering the power of gratitude",
+    "turning a bad day into a good one"
+]
+
 def parseout_json(text:str)->dict:
     if "```" in text:
-        text = text.split("```")
-    text = text[1][4:].strip()
+        parts = text.split("```")
+        if len(parts) >= 2:
+            text = parts[1]
+            # remove language identifier (json, JSON, etc.) if present
+            if text.startswith(('json', 'JSON')):
+                text = text[4:].strip()
+    
+    # Try to parse as JSON directly
+    text = text.strip()
     return json.loads(text)
 
 def mcp_toolcall_repack(text)->list:
@@ -87,7 +123,7 @@ def sanitize_filename(text: str) -> str:
     text = text.strip('. ') # remove leading/trailing whitespace and dots
     return text
 
-def save_story(story_content: str, age_group: str, genre: str, story_number: int):
+def save_story(story_content: str, age_group: str, genre: str, story_number: int, variation_seed: str = ""):
     # output/age_group/genre/
     folder_path = Path("output") / age_group / genre
     folder_path.mkdir(parents=True, exist_ok=True)
@@ -95,13 +131,23 @@ def save_story(story_content: str, age_group: str, genre: str, story_number: int
     # try getting json out
     try:
         story_json = parseout_json(story_content)
+        
+        # Ensure story_json is a dictionary
+        if not isinstance(story_json, dict):
+            raise ValueError("Parsed JSON is not a dictionary")
+        
         title = story_json.get('title', f'story_{story_number}')
-        # add age group, genre, and story number to the JSON
+        
+        # add/update age group, genre, story number, and variation seed in the JSON
         story_json['age_group'] = age_group
         story_json['genre'] = genre
         story_json['story_number'] = story_number
+        if variation_seed:
+            story_json['variation_seed'] = variation_seed
         story_data = story_json
-    except (json.JSONDecodeError, KeyError, IndexError):
+        
+    except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
+        print(f"Warning: Could not parse story as JSON ({type(e).__name__}), saving as plain text")
         title = f'story_{story_number}'
         story_data = {
             "age_group": age_group,
@@ -109,20 +155,23 @@ def save_story(story_content: str, age_group: str, genre: str, story_number: int
             "story_number": story_number,
             "content": story_content
         }
+        if variation_seed:
+            story_data['variation_seed'] = variation_seed
     
     safe_title = sanitize_filename(title)
     filename = f"{safe_title}_{story_number}.json"
     filepath = folder_path / filename
-
+ 
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(story_data, f, indent=2, ensure_ascii=False)
     
-    print(f"Saved story to: {filepath}")
     return filepath
 
-def make_agents(age_group:str, genre:str):
-    instructions_web = web_search_prompt.format(age_group=age_group, genre=genre)
-    instructions_idea = (story_ideator_prompt.replace("{age_group}", age_group).replace("{genre}", genre))
+def make_agents(age_group:str, genre:str, variation_seed:str):
+    instructions_web = web_search_prompt.format(age_group=age_group, genre=genre, variation_seed=variation_seed)
+    instructions_idea = (story_ideator_prompt.replace("{age_group}", age_group)
+                         .replace("{genre}", genre)
+                         .replace("{variation_seed}", variation_seed))
     instructions_write = story_writer_prompt.format(age_group=age_group, genre=genre)
 
     web_searcher = Agent(
@@ -149,8 +198,8 @@ def make_agents(age_group:str, genre:str):
     return web_searcher, story_ideator, story_writer
 
 class StoryFlow(Workflow):
-    async def run(self, age_group: str = "0-2", genre: str = "animals"):
-        web_searcher, story_ideator, story_writer = make_agents(age_group, genre)
+    async def run(self, age_group: str = "0-2", genre: str = "animals", variation_seed: str = ""):
+        web_searcher, story_ideator, story_writer = make_agents(age_group, genre, variation_seed)
         queries = await web_searcher.arun(f"Generate 3 search queries to make stories for age_group {age_group} and genre {genre}")
         queries = json.loads(queries.content.split("```")[1][4:])
         # print(queries)
@@ -191,18 +240,26 @@ async def main():
                 
                 for story_num in range(1, STORIES_PER_COMBINATION + 1):
                     current_story += 1
+                    
+                    # Select a random variation seed for diversity
+                    variation_seed = random.choice(VARIATION_SEEDS)
+                    
                     print(f"\n[{current_story}/{total_stories}] Generating story {story_num}/{STORIES_PER_COMBINATION} for {age_group}/{genre}...")
+                    print(f"  Variation: {variation_seed}")
                     
                     try:
                         # generating
-                        result = await content_workflow.run(age_group=age_group, genre=genre)
+                        result = await content_workflow.run(age_group=age_group, genre=genre, variation_seed=variation_seed)
+                        
+                        if debug:
+                            print(f"  Raw output preview: {result[:200]}...")
                         
                         # saving
-                        filepath = save_story(result, age_group, genre, story_num)
-                        print(f"✓ Successfully saved: {filepath}")
+                        filepath = save_story(result, age_group, genre, story_num, variation_seed)
+                        print(f"Successfully saved: {filepath}")
                         
                     except Exception as e:
-                        print(f"✗ Error generating story {story_num} for {age_group}/{genre}: {e}")
+                        print(f"Error generating story {story_num} for {age_group}/{genre}: {e}")
                         continue
         
         print(f"\n{'='*60}")

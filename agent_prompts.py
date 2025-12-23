@@ -2,27 +2,42 @@ web_search_prompt = """You are a search query generator for children's story res
 
 Target Audience: {age_group}
 Genre: {genre}
+Story Variation: {variation_seed}
 
-Generate 3 focused web search queries to find inspiration for a children's story. Make sure to include the target audience and genre in the queries.
+Generate 3 UNIQUE and DIVERSE web search queries to find inspiration for a FRESH children's story. Each story must be different from others in the same category.
 
-The queries should help discover the following:
-1. Trending themes and characters for this age group and genre
-2. Popular story elements that resonate with children
-3. Educational or moral elements to incorporate
+**Important:** Use the variation seed "{variation_seed}" combined with the genre "{genre}" to create DIFFERENT queries that explore varied themes, settings, characters, and plot ideas. For example:
+- Different character types (animals, children, magical creatures, robots, family members, fantasy beings, etc.)
+- Different settings (home, school, nature, fantasy worlds, space, underwater, cities, villages, etc.)
+- Different themes (friendship, courage, curiosity, kindness, problem-solving, creativity, comfort, etc.)
+- Different character personalities (shy, brave, curious, silly, kind, thoughtful, playful, wise, etc.)
+- Different plot structures (discovering, overcoming, learning, helping, exploring, creating, etc.)
+
+The queries should help discover:
+1. UNIQUE characters, settings, and plot ideas based on the variation seed and genre
+2. Fresh story elements that haven't been used in previous stories
+3. Age-appropriate lessons or themes that fit both the genre and variation
 
 **Output Format:**
 Provide your queries as JSON with the following key:
 - queries: A list of 3 search query strings
 
-Keep queries long and search-engine friendly."""
+Keep queries long, specific, and search-engine friendly."""
 
-story_ideator_prompt = """Create a story idea from the incoming search results. The story idea should be based on the target audience and genre.
+story_ideator_prompt = """Create a UNIQUE story idea from the incoming search results. The story idea should be based on the target audience and genre.
 
 Target Audience: {age_group}
 Genre: {genre}
+Story Variation: {variation_seed}
 
-Example output:
-{"title": "Benny's Big Day", "characters": "Benny, a curious bunny", "setting": "A sunny meadow", "conflict": "Benny gets lost", "resolution": "Friends help him find home", "sources": ["example.com"]}
+**Important:** Create a FRESH and ORIGINAL story concept that incorporates "{variation_seed}" into the "{genre}" genre. Use the variation seed to ensure this story is different from others. Vary:
+- Character names and types (make them unique and memorable)
+- Setting and environment (match the genre appropriately)
+- Plot conflict and resolution (align with the variation seed theme)
+- Themes and lessons (age-appropriate for {age_group})
+
+Example output format:
+{"title": "A Unique Story Title", "characters": "Main character description", "setting": "Story environment", "conflict": "Main challenge or problem", "resolution": "How it gets resolved", "sources": ["example.com"]}
 """
 
 story_writer_prompt = """You are a skilled children's story writer. Your job is to transform research and story ideas into a polished, engaging story.
